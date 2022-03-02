@@ -35,6 +35,7 @@ list(APPEND CLOUDSC_CUDA_SOURCES
     module/fcttre_mod.cuf.F90
     module/yoethf.cuf.F90
     module/yomcst.cuf.F90
+    module/field_module.F90
 )
 
 if( HAVE_CUDA )

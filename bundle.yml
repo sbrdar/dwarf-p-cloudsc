@@ -55,16 +55,17 @@ options :
     - with-gpu :
         help  : Enable GPU kernel (ACC kernels and CLAW-based)
         cmake : >
-            ENABLE_CLOUDSC_GPU_CLAW=ON
-            ENABLE_CLOUDSC_GPU_SCC=ON
-            ENABLE_CLOUDSC_GPU_SCC_HOIST=ON
-            ENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=ON
+            ENABLE_CLOUDSC_GPU_CLAW=OFF
+            ENABLE_CLOUDSC_GPU_SCC=OFF
+            ENABLE_CLOUDSC_GPU_SCC_HOIST=OFF
+            ENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=OFF
 
     - with-cuda :
         help  : Enable GPU kernel variant based on CUDA-Fortran
         cmake : >
             ENABLE_CUDA=ON
-            ENABLE_CLOUDSC_GPU_SCC_CUF=ON
+            ENABLE_CLOUDSC_GPU_SCC_CUF=OFF
+            ENABLE_CLOUDSC_GPU_SCC_FIELD=ON
 
     - with-mpi :
         help  : Enable MPI-parallel kernel

@@ -38,6 +38,11 @@ ecbuild_add_option( FEATURE CLOUDSC_GPU_OMP_SCC_HOIST
     CONDITION Serialbox_FOUND OR HDF5_FOUND
 )
 
+ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_FIELD
+    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with FIELD API" DEFAULT OFF
+    CONDITION Serialbox_FOUND OR HDF5_FOUND
+)
+
 
 if( HAVE_CLOUDSC_GPU_CLAW )
     ecbuild_add_executable(
@@ -167,6 +172,31 @@ if( HAVE_CLOUDSC_GPU_SCC_CUF )
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../../..
         OMP 1
     )
+endif()
+
+
+if( HAVE_CLOUDSC_GPU_SCC_FIELD )
+    ecbuild_add_executable(
+        TARGET dwarf-cloudsc-gpu-scc-field
+        SOURCES
+            dwarf_cloudsc_gpu.F90
+            cloudsc_driver_gpu_scc_field_mod.F90
+            cloudsc_gpu_scc_mod.F90
+        DEFINITIONS ${CLOUDSC_DEFINITIONS} CLOUDSC_GPU_SCC_FIELD
+    )
+    if( HAVE_ACC AND TARGET OpenACC::OpenACC_Fortran )
+        target_link_libraries( dwarf-cloudsc-gpu-scc-field PRIVATE OpenACC::OpenACC_Fortran )
+        target_link_libraries( dwarf-cloudsc-gpu-scc-field PRIVATE cloudsc-common-lib-static )
+    else()
+        target_link_libraries( dwarf-cloudsc-gpu-scc-field PRIVATE cloudsc-common-lib )
+    endif()
+
+    if( HAVE_MPI AND TARGET MPI::MPI_Fortran )
+        target_link_libraries( dwarf-cloudsc-gpu-scc-field PRIVATE MPI::MPI_Fortran )
+    endif()
+    if ( HAVE_HDF5 )
+        target_include_directories( dwarf-cloudsc-gpu-scc-field PRIVATE ${HDF5_Fortran_INCLUDE_DIRS} )
+    endif()
 endif()
 
 
