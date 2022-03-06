@@ -40,6 +40,7 @@ set -x
 
 # Increase stack size to maximum
 ulimit -S -s unlimited
+ulimit -S -l unlimited
 
 # Fix boost header location
 export BOOST_INCLUDEDIR="/usr/local/apps/boost/1.61.0/PGI/17.1/include/"
