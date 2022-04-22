@@ -15,20 +15,22 @@ MODULE FCTTRE_MOD
 !       Taylor expansion of Qs(T) w.r.t. to Temperature, using constants
 !       in YOETHF
 !       Two sets of functions are available. In the first set only the
-!       cases water or ice are distinguished by temperature.  This set 
+!       cases water or ice are distinguished by temperature.  This set
 !       consists of the functions FOEDELTA,FOEEW,FOEDE and FOELH.
-!       The second set considers, besides the two cases water and ice 
+!       The second set considers, besides the two cases water and ice
 !       also a mix of both for the temperature range RTICE < T < RTWAT.
 !       This set contains FOEALFA,FOEEWM,FOEDEM,FOELDCPM and FOELHM.
-!       FKOOP modifies the ice saturation mixing ratio for homogeneous 
+!       FKOOP modifies the ice saturation mixing ratio for homogeneous
 !       nucleation. FOE_DEWM_DT provides an approximate first derivative
 !       of FOEEWM.
 
-!       Depending on the consideration of mixed phases either the first 
-!       set (e.g. surface, post-processing) or the second set 
+!       Depending on the consideration of mixed phases either the first
+!       set (e.g. surface, post-processing) or the second set
 !       (e.g. clouds, condensation, convection) should be used.
 
 !     ------------------------------------------------------------------
+
+#ifndef CLOUDSC_STMT_FUNC
 
   USE PARKIND1, ONLY : JPIM, JPRB
 
@@ -117,7 +119,7 @@ MODULE FCTTRE_MOD
     !$acc routine seq
 
     FOEALFA = MIN(1.0_JPRB,((MAX(RTICE,MIN(RTWAT,PTARE))-RTICE)&
-     &*RTWAT_RTICE_R)**2) 
+     &*RTWAT_RTICE_R)**2)
   END FUNCTION FOEALFA
 
   !     Pressure of water vapour at saturation
@@ -200,7 +202,7 @@ MODULE FCTTRE_MOD
     !$acc routine seq
 
     FOEALFCU = MIN(1.0_JPRB,((MAX(RTICECU,MIN(RTWAT,PTARE))&
-     &-RTICECU)*RTWAT_RTICECU_R)**2) 
+     &-RTICECU)*RTWAT_RTICECU_R)**2)
   END FUNCTION FOEALFCU
 
   !     Pressure of water vapour at saturation
@@ -245,10 +247,10 @@ MODULE FCTTRE_MOD
   !     Pressure of water vapour at saturation
   !     This one is for the WMO definition of saturation, i.e. always
   !     with respect to water.
-  !     
+  !
   !     Duplicate to FOEELIQ and FOEEICE for separate ice variable
-  !     FOEELIQ always respect to water 
-  !     FOEEICE always respect to ice 
+  !     FOEELIQ always respect to water
+  !     FOEEICE always respect to ice
   !     (could use FOEEW and FOEEWMO, but naming convention unclear)
   !     FOELSON returns e wrt liquid water using D Sonntag (1994, Met. Zeit.)
   !      - now recommended for use with radiosonde data (WMO CIMO guide, 2014)
@@ -320,5 +322,7 @@ MODULE FCTTRE_MOD
 
     FOEEWMCU_V = R2ES*(FOEALFCU(PTARE)*EXP1+(1.0_JPRB-FOEALFCU(PTARE))*EXP2)
   END FUNCTION FOEEWMCU_V
+
+#endif
 
 END MODULE

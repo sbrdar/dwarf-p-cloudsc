@@ -97,6 +97,14 @@ if( HAVE_SINGLE_PRECISION )
     list(APPEND CLOUDSC_DEFINITIONS SINGLE)
 endif()
 
+# Add option to force use of statement functions
+ecbuild_add_option( FEATURE USE_STMT_FUNC
+    DESCRIPTION "Force the use of statement functions for comdeck functions"
+)
+if( HAVE_USE_STMT_FUNC )
+    list(APPEND CLOUDSC_DEFINITIONS CLOUDSC_STMT_FUNC)
+endif()
+
 # build executables
 add_subdirectory(src)
 
