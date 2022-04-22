@@ -43,7 +43,7 @@ CONTAINS
     ! Driver routine that invokes the optimized CLAW-based CLOUDSC GPU kernel
 
     INTEGER(KIND=JPIM)                                    :: NUMOMP, NPROMA, NLEV, NGPTOT, NGPBLKS, NGPTOTG
-    INTEGER(KIND=JPIM)                                    :: KFLDX 
+    INTEGER(KIND=JPIM)                                    :: KFLDX
     REAL(KIND=JPRB)                                       :: PTSPHY       ! Physics timestep
     REAL(KIND=JPRB), INTENT(IN)    :: PT(NPROMA, NLEV, NGPBLKS) ! T at start of callpar
     REAL(KIND=JPRB), INTENT(IN)    :: PQ(NPROMA, NLEV, NGPBLKS) ! Q at start of callpar
@@ -96,7 +96,7 @@ CONTAINS
     REAL(KIND=JPRB), INTENT(OUT) :: PFHPSL(NPROMA, NLEV+1, NGPBLKS)    ! Enthalpy flux for liq
     REAL(KIND=JPRB), INTENT(OUT) :: PFHPSN(NPROMA, NLEV+1, NGPBLKS)    ! ice number concentration (cf. CCN)
 
-    ! Local declarations of promoted temporaries 
+    ! Local declarations of promoted temporaries
     REAL(KIND=JPRB) :: ZFOEALFA(NPROMA, NLEV+1, NGPBLKS)
     REAL(KIND=JPRB) :: ZTP1(NPROMA, NLEV, NGPBLKS)
     REAL(KIND=JPRB) :: ZLI(NPROMA, NLEV, NGPBLKS)
@@ -202,7 +202,7 @@ CONTAINS
 !$omp end parallel do
     ENDDO
 !$omp end target teams distribute
-    
+
     CALL TIMER%THREAD_END(TID)
 
 !$omp end target data

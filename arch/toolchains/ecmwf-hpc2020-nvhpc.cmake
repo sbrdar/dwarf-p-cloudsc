@@ -24,9 +24,9 @@ set( OpenMP_Fortran_FLAGS       "-mp -mp=bind,allcores,numa" )
 # OpenAcc FLAGS
 ####################################################################
 
-set( OpenACC_Fortran_FLAGS "-acc=gpu -gpu=lineinfo,fastmath" )
+set( OpenACC_Fortran_FLAGS "-acc=gpu -mp=gpu -gpu=fastmath,lineinfo" )
 # Enable this to get more detailed compiler output
-# set( OpenACC_Fortran_FLAGS "${OpenACC_Fortran_FLAGS} -Minfo" )
+set( OpenACC_Fortran_FLAGS "${OpenACC_Fortran_FLAGS} -Minfo" )
 
 ####################################################################
 # COMMON FLAGS
