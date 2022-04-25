@@ -17,6 +17,15 @@ set( ENABLE_USE_STMT_FUNC ON )
 # Compiler FLAGS
 ####################################################################
 
+# Force compiler
+include (CMakeForceCompiler)
+set(CMAKE_C_COMPILER cc)
+set(CMAKE_CXX_COMPILER CC)
+# set(CMAKE_Fortran_COMPILER ftn)
+#CMAKE_FORCE_C_COMPILER   (cc Cray)
+#CMAKE_FORCE_CXX_COMPILER (CC Cray)
+CMAKE_FORCE_Fortran_COMPILER (ftn Cray)
+
 # General Flags (add to default)
 set(ECBUILD_Fortran_FLAGS "${ECBUILD_Fortran_FLAGS} -homp")
 
@@ -43,4 +52,4 @@ set( ECBUILD_EXE_LINKER_FLAGS    "-Wl,--eh-frame-hdr -Ktrap=fp -Wl,-Map,loadmap 
 set( ECBUILD_CXX_IMPLICIT_LINK_LIBRARIES "${LIBCRAY_CXX_RTS}" CACHE STRING "" )
 
 #add_link_options("--rocm-path=$ENV{ROCM_PATH} -L$ENV{ROCM_PATH}/lib -lamdhip64")
-add_link_options("-L$ENV{ROCM_PATH}/lib -lamdhip64")
+add_link_options(-L$ENV{ROCM_PATH}/lib -lamdhip64)

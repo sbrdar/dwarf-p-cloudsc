@@ -24,16 +24,16 @@ module_unload() {
 module reset
 
 # Load modules
-module_load cce/13.0.0
-module_load CrayEnv
-module_load PrgEnv-cray/8.2.0
-module_load craype-accel-amd-gfx908
+module_load LUMI/21.12
+module_load partition/EAP
 module_load rocm/4.5.2
 module_load buildtools/21.12
 module_load cray-hdf5/1.12.0.7
 module_load cray-python/3.9.4.2
 
 set -x
+
+export CC=cc CXX=CC FC=ftn
 
 export CRAY_ADD_RPATH=yes
 
