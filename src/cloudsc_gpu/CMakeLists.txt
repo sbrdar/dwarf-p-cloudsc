@@ -23,6 +23,11 @@ ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC
     CONDITION Serialbox_FOUND OR HDF5_FOUND
 )
 
+ecbuild_add_option( FEATURE CLOUDSC_GPU_OMP_SCC_HOIST
+    DESCRIPTION "Build optimized OpenMP offload GPU version of CLOUDSC using SCC with hoisted temporary arrays" DEFAULT OFF
+    CONDITION Serialbox_FOUND OR HDF5_FOUND
+)
+
 ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_HOIST
     DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with hoisted temporary arrays" DEFAULT OFF
     CONDITION Serialbox_FOUND OR HDF5_FOUND
@@ -101,7 +106,9 @@ if( HAVE_CLOUDSC_GPU_SCC_HOIST )
     if ( HAVE_HDF5 )
         target_include_directories( dwarf-cloudsc-gpu-scc-hoist PRIVATE ${HDF5_Fortran_INCLUDE_DIRS} )
     endif()
+endif()
 
+if( HAVE_CLOUDSC_GPU_OMP_SCC_HOIST )
     # OpenMP5
     ecbuild_add_executable(
         TARGET dwarf-cloudsc-gpu-omp-scc-hoist
