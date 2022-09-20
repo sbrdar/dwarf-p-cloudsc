@@ -15,7 +15,7 @@ cmake_policy( SET CMP0077 NEW )
 find_package( ecbuild REQUIRED )
 
 # define the project
-project( dwarf-p-cloudsc LANGUAGES C Fortran )
+project( dwarf-p-cloudsc LANGUAGES C Fortran CUDA)
 
 include( cmake/compat.cmake )
 if( CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
