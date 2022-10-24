@@ -35,7 +35,6 @@ list(APPEND CLOUDSC_CUDA_SOURCES
     module/fcttre_mod.cuf.F90
     module/yoethf.cuf.F90
     module/yomcst.cuf.F90
-    module/field_module.F90
 )
 
 if( HAVE_CUDA )
@@ -81,10 +80,12 @@ ecbuild_add_library( TARGET cloudsc-common-lib
         $<INSTALL_INTERFACE:include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/module>
+        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/field_module>
     PUBLIC_LIBS
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
         $<${HAVE_MPI}:MPI::MPI_Fortran>
         $<${HAVE_HDF5}:hdf5::hdf5_fortran>
         $<${HAVE_SERIALBOX}:Serialbox::Serialbox_Fortran>
+        field-api
 )
