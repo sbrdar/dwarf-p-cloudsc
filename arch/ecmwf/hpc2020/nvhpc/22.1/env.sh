@@ -43,6 +43,7 @@ module_load java/11.0.6
 
 # Increase stack size to maximum
 ulimit -S -s unlimited
+ulimit -S -l unlimited
 
 set -x
 
