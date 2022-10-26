@@ -43,8 +43,7 @@ module_load java/11.0.6
 
 # Increase stack size to maximum
 ulimit -S -s unlimited
-
-set -x
+ulimit -S -l unlimited
 
 # Restore tracing to stored setting
 { if [[ -n "$tracing_" ]]; then set -x; else set +x; fi } 2>/dev/null
