@@ -26,6 +26,11 @@ if( HAVE_CLOUDSC_FORTRAN )
         DEFINITIONS ${CLOUDSC_DEFINITIONS}
     )
 
+    # add cuda flag for linking if we are using field-api
+    if( HAVE_CLOUDSC_GPU_SCC_FIELD )
+        set_target_properties(dwarf-cloudsc-fortran PROPERTIES LINK_FLAGS "-cuda")
+    endif()
+
     # Create symlink for the input data
     if( HAVE_SERIALBOX )
       execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink

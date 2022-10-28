@@ -15,7 +15,7 @@ cmake_policy( SET CMP0077 NEW )
 find_package( ecbuild REQUIRED )
 
 # define the project
-project( dwarf-p-cloudsc LANGUAGES C Fortran CUDA)
+project( dwarf-p-cloudsc LANGUAGES C Fortran )
 
 include( cmake/compat.cmake )
 if( CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
@@ -90,6 +90,15 @@ ecbuild_add_option( FEATURE SERIALBOX
 if( HAVE_SERIALBOX )
     list(APPEND CLOUDSC_DEFINITIONS HAVE_SERIALBOX)
 endif()
+
+# If field-api is used, not only does it affect the build process of cloudsc-common-lib,
+# but the definition of STATE_TYPE in common/module/yomphyder.F90 also changes
+# therefore the build process of the standard fortran target is also affected
+# Although not ideal, this feature is thus added in the top-level cmake rather than in cloudsc_gpu
+ecbuild_add_option( FEATURE CLOUDSC_GPU_SCC_FIELD
+    DESCRIPTION "Build optimized GPU version of CLOUDSC using SCC with FIELD API" DEFAULT OFF
+    CONDITION Serialbox_FOUND OR HDF5_FOUND
+)
 
 ecbuild_find_package( NAME loki )
 

@@ -43,6 +43,8 @@ projects :
         require : ecbuild
         cmake   : >
             ENABLE_FIELD-API_TESTS=OFF
+            ENABLE_FIELD-API_FIAT_BUILD=OFF
+            FIELD-API_UTIL_MODULE_PATH=${CMAKE_SOURCE_DIR}/cloudsc-dwarf/src/common/module
 
     - cloudsc-dwarf :
         # The CLOUDSC dwarf project with multiple implementations
@@ -63,10 +65,10 @@ options :
     - with-gpu :
         help  : Enable GPU kernel (ACC kernels and CLAW-based)
         cmake : >
-            ENABLE_CLOUDSC_GPU_CLAW=OFF
-            ENABLE_CLOUDSC_GPU_SCC=OFF
-            ENABLE_CLOUDSC_GPU_SCC_HOIST=OFF
-            ENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=OFF
+            ENABLE_CLOUDSC_GPU_CLAW=ON
+            ENABLE_CLOUDSC_GPU_SCC=ON
+            ENABLE_CLOUDSC_GPU_SCC_HOIST=ON
+            ENABLE_CLOUDSC_GPU_OMP_SCC_HOIST=ON
 
     - with-cuda :
         help  : Enable GPU kernel variant based on CUDA-Fortran

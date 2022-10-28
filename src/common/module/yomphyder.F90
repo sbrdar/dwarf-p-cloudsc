@@ -10,7 +10,9 @@
 module yomphyder
 
 USE PARKIND1, ONLY : JPIM, JPRB
+#IFDEF CLOUDSC_GPU_SCC_FIELD
 USE FIELD_MODULE, ONLY: FIELD_3D, FIELD_4D
+#ENDIF
 
 !     ------------------------------------------------------------------
 
@@ -34,8 +36,10 @@ type state_type
   REAL(KIND=JPRB), dimension(:,:,:), pointer :: cld   ! composed cloud array
   !REAL(KIND=JPRB), dimension(:,:), pointer :: qsat    ! spec. humidity at saturation
 
+#IFDEF CLOUDSC_GPU_SCC_FIELD
   CLASS(FIELD_3D), POINTER :: F_T, F_A, F_Q
   CLASS(FIELD_4D), POINTER :: F_CLD
+#ENDIF
 end type state_type
 
 type model_state_type

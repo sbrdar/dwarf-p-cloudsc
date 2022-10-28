@@ -20,6 +20,7 @@ list(APPEND CLOUDSC_COMMON_SOURCES
     module/fccld_mod.F90
     module/routines.F90
     module/abor1.F90
+    module/oml_mod.F90
     module/timer_mod.F90
     module/mycpu.c
     module/ec_pmon_mod.F90
@@ -67,9 +68,15 @@ else()
     set( LIBRARY_TYPE SHARED )
 endif()
 
+if( HAVE_CLOUDSC_GPU_SCC_FIELD )
+    list(APPEND CLOUDSC_COMMON_SOURCES
+        module/cloudsc_field_state_mod.F90
+    )
+endif()
+
 ecbuild_add_library( TARGET cloudsc-common-lib
     TYPE ${LIBRARY_TYPE}
-    DEFINITIONS ${CLOUDSC_DEFINITIONS}
+    DEFINITIONS ${CLOUDSC_DEFINITIONS} $<${HAVE_CLOUDSC_GPU_SCC_FIELD}:CLOUDSC_GPU_SCC_FIELD>
     SOURCES
         ${CLOUDSC_COMMON_SOURCES}
         $<${HAVE_MPI}:module/cloudsc_mpif.F90>
@@ -80,12 +87,12 @@ ecbuild_add_library( TARGET cloudsc-common-lib
         $<INSTALL_INTERFACE:include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/module>
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/field_module>
+        $<${HAVE_CLOUDSC_GPU_SCC_FIELD}:${CMAKE_BINARY_DIR}/field_module>
     PUBLIC_LIBS
         $<${HAVE_ACC}:OpenACC::OpenACC_Fortran>
         $<${HAVE_OMP}:OpenMP::OpenMP_Fortran>
         $<${HAVE_MPI}:MPI::MPI_Fortran>
         $<${HAVE_HDF5}:hdf5::hdf5_fortran>
         $<${HAVE_SERIALBOX}:Serialbox::Serialbox_Fortran>
-        field-api
+        $<${HAVE_CLOUDSC_GPU_SCC_FIELD}:field-api>
 )
