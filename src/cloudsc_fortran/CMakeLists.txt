@@ -23,6 +23,7 @@ if( HAVE_CLOUDSC_FORTRAN )
             cloudsc.F90
         LIBS
             cloudsc-common-lib
+            atlas_f
         DEFINITIONS ${CLOUDSC_DEFINITIONS}
     )
 
