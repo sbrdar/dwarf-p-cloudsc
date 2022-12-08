@@ -15,6 +15,9 @@ USE CLOUDSC_GLOBAL_STATE_MOD, ONLY: CLOUDSC_GLOBAL_STATE
 USE CLOUDSC_DRIVER_MOD, ONLY: CLOUDSC_DRIVER
 USE EC_PMON_MOD, ONLY: EC_PMON
 
+USE ATLAS_MODULE
+USE, INTRINSIC :: ISO_C_BINDING
+
 IMPLICIT NONE
 
 CHARACTER(LEN=20) :: CLARG
@@ -45,6 +48,7 @@ if (IARGS >= 1) then
 end if
 
 ! Initialize MPI environment
+call atlas_library%initialise()
 CALL CLOUDSC_MPI_INIT(NUMOMP)
 
 ! Get total number of grid points (NGPTOT) with which to run the benchmark
@@ -92,6 +96,8 @@ CALL CLOUDSC_DRIVER(NUMOMP, NPROMA, GLOBAL_STATE%KLEV, NGPTOT, NGPTOTG, &
 
 ! Validate the output against serialized reference data
 CALL GLOBAL_STATE%VALIDATE(NPROMA, NGPTOT, NGPTOTG)
+
+call atlas_library%initialise()
 
 ! Tear down MPI environment
 CALL CLOUDSC_MPI_END()

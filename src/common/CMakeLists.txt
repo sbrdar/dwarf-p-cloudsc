@@ -27,6 +27,7 @@ list(APPEND CLOUDSC_COMMON_SOURCES
     module/expand_mod.F90
     module/validate_mod.F90
     module/cloudsc_global_state_mod.F90
+    module/cloudsc_global_atlas_state_mod.F90
     module/cloudsc_mpi_mod.F90
 )
 
@@ -74,6 +75,8 @@ ecbuild_add_library( TARGET cloudsc-common-lib
         ${CLOUDSC_COMMON_SOURCES}
         $<${HAVE_MPI}:module/cloudsc_mpif.F90>
         $<${HAVE_HDF5}:module/hdf5_file_mod.F90>
+    LIBS
+        atlas_f
     PRIVATE_INCLUDES
         $<${HAVE_HDF5}:${HDF5_Fortran_INCLUDE_DIRS}>
     PUBLIC_INCLUDES
