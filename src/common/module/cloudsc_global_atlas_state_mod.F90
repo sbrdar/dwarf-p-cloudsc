@@ -17,7 +17,7 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
   USE YOEPHLI  , ONLY : YREPHLI, YREPHLI_LOAD_PARAMETERS
 
   USE FILE_IO_MOD, ONLY: INPUT_INITIALIZE, INPUT_FINALIZE, LOAD_SCALAR, LOAD_ARRAY
-  USE EXPAND_MOD, ONLY: LOAD_AND_EXPAND, LOAD_AND_EXPAND_STATE
+  USE EXPAND_MOD, ONLY: LOAD_AND_EXPAND, LOAD_AND_EXPAND_STATE, LOAD_AND_EXPAND_ATLAS, LOAD_AND_EXPAND_STATE_ATLAS
   USE VALIDATE_MOD, ONLY: VALIDATE
   USE CLOUDSC_MPI_MOD, ONLY: IRANK
 
@@ -28,7 +28,9 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
   IMPLICIT NONE
 
   TYPE(ATLAS_STRUCTUREDGRID) :: GRID
-  TYPE(ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS) :: FS
+  TYPE(ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS) :: FSPACE
+  TYPE(ATLAS_FIELDSET) :: FSET
+  TYPE(ATLAS_STATE) :: FSTATE
 
   TYPE CLOUDSC_GLOBAL_ATLAS_STATE
     ! Memory state containing raw fields annd tendencies for CLOUDSC dwarf
@@ -43,41 +45,46 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(KIND=JPRB)                      :: PTSPHY          ! Physics timestep
 
     ! Input field variables and tendencies
-    TYPE(ATLAS_FIELD) :: PLCRIT_AER 
-    !REAL(KIND=JPRB), ALLOCATABLE :: PLCRIT_AER(:,:,:) 
-    REAL(KIND=JPRB), ALLOCATABLE :: PICRIT_AER(:,:,:) 
-    REAL(KIND=JPRB), ALLOCATABLE :: PRE_ICE(:,:,:) 
-    REAL(KIND=JPRB), ALLOCATABLE :: PCCN(:,:,:)     ! liquid cloud condensation nuclei
-    REAL(KIND=JPRB), ALLOCATABLE :: PNICE(:,:,:)    ! ice number concentration (cf. CCN)
+    REAL(c_double), POINTER :: PLCRIT_AER(:,:,:) 
+    REAL(c_double), POINTER :: PICRIT_AER(:,:,:) 
+    REAL(c_double), POINTER :: PRE_ICE(:,:,:) 
+    REAL(c_double), POINTER :: PCCN(:,:,:)     ! liquid cloud condensation nuclei
+    REAL(c_double), POINTER :: PNICE(:,:,:)    ! ice number concentration (cf. CCN)
 
-    REAL(KIND=JPRB), ALLOCATABLE :: PT(:,:,:)       ! T at start of callpar
-    REAL(KIND=JPRB), ALLOCATABLE :: PQ(:,:,:)       ! Q at start of callpar
+    REAL(c_double), POINTER :: PT(:,:,:)       ! T at start of callpar
+    REAL(c_double), POINTER :: PQ(:,:,:)       ! Q at start of callpar
+    !REAL(c_double), POINTER :: TENDENCY_CML(:) ! cumulative tendency used for final output
+    !REAL(c_double), POINTER :: TENDENCY_TMP(:) ! cumulative tendency used as input
+    !REAL(c_double), POINTER :: TENDENCY_LOC(:) ! local tendency from cloud scheme
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_CML(:) ! cumulative tendency used for final output
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_TMP(:) ! cumulative tendency used as input
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_LOC(:) ! local tendency from cloud scheme
-    REAL(KIND=JPRB), ALLOCATABLE :: PVFA(:,:,:)     ! CC from VDF scheme
-    REAL(KIND=JPRB), ALLOCATABLE :: PVFL(:,:,:)     ! Liq from VDF scheme
-    REAL(KIND=JPRB), ALLOCATABLE :: PVFI(:,:,:)     ! Ice from VDF scheme
-    REAL(KIND=JPRB), ALLOCATABLE :: PDYNA(:,:,:)    ! CC from Dynamics
-    REAL(KIND=JPRB), ALLOCATABLE :: PDYNL(:,:,:)    ! Liq from Dynamics
-    REAL(KIND=JPRB), ALLOCATABLE :: PDYNI(:,:,:)    ! Liq from Dynamics
-    REAL(KIND=JPRB), ALLOCATABLE :: PHRSW(:,:,:)    ! Short-wave heating rate
-    REAL(KIND=JPRB), ALLOCATABLE :: PHRLW(:,:,:)    ! Long-wave heating rate
-    REAL(KIND=JPRB), ALLOCATABLE :: PVERVEL(:,:,:)  ! Vertical velocity
-    REAL(KIND=JPRB), ALLOCATABLE :: PAP(:,:,:)      ! Pressure on full levels
-    REAL(KIND=JPRB), ALLOCATABLE :: PAPH(:,:,:)     ! Pressure on half levels
-    REAL(KIND=JPRB), ALLOCATABLE :: PLSM(:,:)       ! Land fraction (0-1) 
-    LOGICAL,         ALLOCATABLE :: LDCUM(:,:)      ! Convection active
-    INTEGER(KIND=JPIM), ALLOCATABLE :: KTYPE(:,:)   ! Convection type 0,1,2
-    REAL(KIND=JPRB), ALLOCATABLE :: PLU(:,:,:)      ! Conv. condensate
-    REAL(KIND=JPRB), ALLOCATABLE :: PLUDE(:,:,:)    ! Conv. detrained water 
-    REAL(KIND=JPRB), ALLOCATABLE :: PSNDE(:,:,:)    ! Conv. detrained snow
-    REAL(KIND=JPRB), ALLOCATABLE :: PMFU(:,:,:)     ! Conv. mass flux up
-    REAL(KIND=JPRB), ALLOCATABLE :: PMFD(:,:,:)     ! Conv. mass flux down
-    REAL(KIND=JPRB), ALLOCATABLE :: PA(:,:,:)       ! Original Cloud fraction (t)
-    REAL(KIND=JPRB), ALLOCATABLE :: PEXTRA(:,:,:,:) ! extra fields
-    REAL(KIND=JPRB), ALLOCATABLE :: PCLV(:,:,:,:) 
-    REAL(KIND=JPRB), ALLOCATABLE :: PSUPSAT(:,:,:)
+    REAL(c_double), POINTER :: PVFA(:,:,:)     ! CC from VDF scheme
+    REAL(c_double), POINTER :: PVFL(:,:,:)     ! Liq from VDF scheme
+    REAL(c_double), POINTER :: PVFI(:,:,:)     ! Ice from VDF scheme
+    REAL(c_double), POINTER :: PDYNA(:,:,:)    ! CC from Dynamics
+    REAL(c_double), POINTER :: PDYNL(:,:,:)    ! Liq from Dynamics
+    REAL(c_double), POINTER :: PDYNI(:,:,:)    ! Liq from Dynamics
+    REAL(c_double), POINTER :: PHRSW(:,:,:)    ! Short-wave heating rate
+    REAL(c_double), POINTER :: PHRLW(:,:,:)    ! Long-wave heating rate
+    REAL(c_double), POINTER :: PVERVEL(:,:,:)  ! Vertical velocity
+    REAL(c_double), POINTER :: PAP(:,:,:)      ! Pressure on full levels
+    REAL(c_double), POINTER :: PAPH(:,:,:)     ! Pressure on half levels
+    REAL(c_double), POINTER :: PLSM(:,:)       ! Land fraction (0-1) 
+    LOGICAL, POINTER :: LDCUM(:,:)      ! Convection active
+!    INTEGER(c_int), POINTER :: LDCUM(:,:)   ! Convection type 0,1,2
+    INTEGER(c_int), POINTER :: KTYPE(:,:)   ! Convection type 0,1,2
+!    LOGICAL, ALLOCATABLE :: LDCUM(:,:)      ! Convection active
+!    INTEGER(KIND=JPIM), ALLOCATABLE :: KTYPE(:,:)   ! Convection type 0,1,2
+    REAL(c_double), POINTER :: PLU(:,:,:)      ! Conv. condensate
+    REAL(c_double), POINTER :: PLUDE(:,:,:)    ! Conv. detrained water 
+    REAL(c_double), POINTER :: PSNDE(:,:,:)    ! Conv. detrained snow
+    REAL(c_double), POINTER :: PMFU(:,:,:)     ! Conv. mass flux up
+    REAL(c_double), POINTER :: PMFD(:,:,:)     ! Conv. mass flux down
+    REAL(c_double), POINTER :: PA(:,:,:)       ! Original Cloud fraction (t)
+    REAL(c_double), POINTER :: PEXTRA(:,:,:,:) ! extra fields
+    REAL(c_double), POINTER :: PCLV(:,:,:,:) 
+    REAL(c_double), POINTER :: PSUPSAT(:,:,:)
 
     ! Output fields used for validation
     REAL(KIND=JPRB), ALLOCATABLE :: PCOVPTOT(:,:,:) ! Precip fraction
@@ -98,6 +105,9 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(KIND=JPRB), ALLOCATABLE :: PFHPSN(:,:,:)   ! Enthalp flux for ice
 
     ! Underlying data buffers for AOSOA allcoated STATE_TYPE arrays
+!    REAL(c_double), POINTER :: B_CML(:,:,:,:)
+!    REAL(c_double), POINTER :: B_TMP(:,:,:,:)
+!    REAL(c_double), POINTER :: B_LOC(:,:,:,:)
     REAL(KIND=JPRB), ALLOCATABLE :: B_CML(:,:,:,:)
     REAL(KIND=JPRB), ALLOCATABLE :: B_TMP(:,:,:,:)
     REAL(KIND=JPRB), ALLOCATABLE :: B_LOC(:,:,:,:)
@@ -109,8 +119,24 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
   INTERFACE FIELD_INIT
      PROCEDURE FIELD_INIT_R1, FIELD_INIT_R2, FIELD_INIT_R3, FIELD_INIT_STATE
   END INTERFACE FIELD_INIT
+  INTERFACE FIELD_INIT_ATLAS
+     PROCEDURE FIELD_INIT_R1_ATLAS, FIELD_INIT_R2_ATLAS, FIELD_INIT_R3_ATLAS
+  END INTERFACE FIELD_INIT_ATLAS
 
 CONTAINS
+
+  SUBROUTINE FIELD_INIT_R1_ATLAS(FIELD, NPROMA,NBLOCKS)
+    ! Allocate and initialize (zero) empty output fields
+    REAL(C_DOUBLE), INTENT(INOUT) :: FIELD(:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: NPROMA, NBLOCKS
+    INTEGER(KIND=JPIM) :: B
+
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(B) schedule(runtime)
+    DO B=1, NBLOCKS
+       FIELD(:,B) = 0.0_JPRB
+    END DO
+!$omp end parallel do 
+  END SUBROUTINE FIELD_INIT_R1_ATLAS
 
   SUBROUTINE FIELD_INIT_R1(FIELD, NPROMA,NBLOCKS)
     ! Allocate and initialize (zero) empty output fields
@@ -126,6 +152,19 @@ CONTAINS
 !$omp end parallel do 
   END SUBROUTINE FIELD_INIT_R1
 
+  SUBROUTINE FIELD_INIT_R2_ATLAS(FIELD, NPROMA, NLEV, NBLOCKS)
+    ! Allocate and initialize (zero) empty output fields
+    REAL(C_DOUBLE), POINTER, INTENT(INOUT) :: FIELD(:,:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: NPROMA, NLEV, NBLOCKS
+    INTEGER(KIND=JPIM) :: B
+
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(B) schedule(runtime)
+    DO B=1, NBLOCKS
+       FIELD(:,:,B) = 0.0_JPRB
+    END DO
+!$omp end parallel do 
+  END SUBROUTINE FIELD_INIT_R2_ATLAS
+
   SUBROUTINE FIELD_INIT_R2(FIELD, NPROMA, NLEV, NBLOCKS)
     ! Allocate and initialize (zero) empty output fields
     REAL(KIND=JPRB), ALLOCATABLE, INTENT(INOUT) :: FIELD(:,:,:)
@@ -140,6 +179,19 @@ CONTAINS
 !$omp end parallel do 
   END SUBROUTINE FIELD_INIT_R2
 
+  SUBROUTINE FIELD_INIT_R3_ATLAS(FIELD, NPROMA, NLEV, NDIM, NBLOCKS)
+    ! Allocate and initialize (zero) empty output fields
+    REAL(C_DOUBLE), POINTER, INTENT(INOUT) :: FIELD(:,:,:,:)
+    INTEGER(KIND=JPIM), INTENT(IN) :: NPROMA, NLEV, NDIM, NBLOCKS
+    INTEGER(KIND=JPIM) :: B
+
+!$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(B) schedule(runtime)
+    DO B=1, NBLOCKS
+       FIELD(:,:,:,B) = 0.0_JPRB
+    END DO
+!$omp end parallel do 
+  END SUBROUTINE FIELD_INIT_R3_ATLAS
+
   SUBROUTINE FIELD_INIT_R3(FIELD, NPROMA, NLEV, NDIM, NBLOCKS)
     ! Allocate and initialize (zero) empty output fields
     REAL(KIND=JPRB), ALLOCATABLE, INTENT(INOUT) :: FIELD(:,:,:,:)
@@ -153,6 +205,7 @@ CONTAINS
     END DO
 !$omp end parallel do 
   END SUBROUTINE FIELD_INIT_R3
+
 
   SUBROUTINE FIELD_INIT_STATE(STATE, BUFFER, NPROMA, NLEV, NDIM, NBLOCKS)
     ! Allocate empty state struct array
@@ -185,6 +238,7 @@ CONTAINS
     INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NGPTOTG
 
     INTEGER(KIND=JPIM) :: KLON
+    TYPE(atlas_Field) :: FIELD
 
     CALL INPUT_INITIALIZE(NAME='input')
 
@@ -193,42 +247,143 @@ CONTAINS
     CALL LOAD_SCALAR('KLEV', SELF%KLEV)
     CALL LOAD_SCALAR('KFLDX', SELF%KFLDX)
 
-    GRID = ATLAS_StructuredGrid("L256x64")
-    FS = atlas_functionspace_BlockStructuredColumns(grid, levels=SELF%KLEV, nproma=NPROMA, halo=0)
-    SELF%PLCRIT_AER = fs%create_field(name="PLCRIT_AER", kind=atlas_real(JPRB))
+    !! Temporary hack is L256x64, needs
+    GRID = ATLAS_StructuredGrid("L512x32")
+    FSPACE = atlas_functionspace_BlockStructuredColumns(grid, levels=SELF%KLEV, nproma=NPROMA, halo=0)
+    FSET = atlas_FieldSet();
+    FIELD = FSPACE%create_field(name="PLCRIT_AER", kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PLCRIT_AER)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PICRIT_AER", kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PICRIT_AER)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PRE_ICE"   , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PRE_ICE)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PCCN"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PCCN)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PNICE"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PNICE)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PT"        , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PT)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PQ"        , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PQ)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PVFA"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PVFA)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PVFL"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PVFL)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PVFI"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PVFI)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PDYNA"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PDYNA)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PDYNL"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PDYNL)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PDYNI"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PDYNI)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PHRSW"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PHRSW)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PHRLW"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PHRLW)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PVERVEL"   , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PVERVEL)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PAP"       , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PAP)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PAPH"      , kind=atlas_real(JPRB), levels=SELF%KLEV+1)
+    CALL FIELD%DATA(SELF%PAPH)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PLSM"      , kind=atlas_real(JPRB), levels=0)
+    CALL FIELD%DATA(SELF%PLSM)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="LDCUM"     , kind=atlas_logical(), levels=0)
+    CALL FIELD%DATA(SELF%LDCUM)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="KTYPE"     , kind=atlas_integer(JPIM), levels=0)
+    CALL FIELD%DATA(SELF%KTYPE)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PLU"       , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PLU)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PLUDE"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PLUDE)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PSNDE"     , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PSNDE)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PMFU"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PMFU)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PMFD"      , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PMFD)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PA"        , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PA)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PEXTRA"    , kind=atlas_real(JPRB), variables=MAX(1,SELF%KFLDX))
+    CALL FIELD%DATA(SELF%PEXTRA)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PCLV"      , kind=atlas_real(JPRB), variables=MAX(1,NCLV))
+    CALL FIELD%DATA(SELF%PCLV)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name="PSUPSAT"   , kind=atlas_real(JPRB))
+    CALL FIELD%DATA(SELF%PSUPSAT)
+    CALL FSET%add(FIELD)
 
-    CALL LOAD_AND_EXPAND('PLCRIT_AER', SELF%PLCRIT_AER, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PICRIT_AER', SELF%PICRIT_AER, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PRE_ICE', SELF%PRE_ICE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PCCN', SELF%PCCN, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PNICE', SELF%PNICE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PT', SELF%PT, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PQ', SELF%PQ, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PVFA', SELF%PVFA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PVFL', SELF%PVFL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PVFI', SELF%PVFI, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PDYNA', SELF%PDYNA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PDYNL', SELF%PDYNL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PDYNI', SELF%PDYNI, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PHRSW', SELF%PHRSW, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PHRLW', SELF%PHRLW, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PVERVEL', SELF%PVERVEL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PAP', SELF%PAP, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PAPH', SELF%PAPH, KLON, SELF%KLEV+1, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PLSM', SELF%PLSM, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('LDCUM', SELF%LDCUM, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('KTYPE', SELF%KTYPE, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PLU', SELF%PLU, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PLUDE', SELF%PLUDE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PSNDE', SELF%PSNDE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PMFU', SELF%PMFU, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PMFD', SELF%PMFD, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PA', SELF%PA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PCLV', SELF%PCLV, KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND('PSUPSAT', SELF%PSUPSAT, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PICRIT_AER', SELF%PICRIT_AER, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PRE_ICE', SELF%PRE_ICE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PCCN', SELF%PCCN, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PNICE', SELF%PNICE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PT', SELF%PT, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PQ', SELF%PQ, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PVFA', SELF%PVFA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PVFL', SELF%PVFL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PVFI', SELF%PVFI, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PDYNA', SELF%PDYNA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PDYNL', SELF%PDYNL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PDYNI', SELF%PDYNI, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PHRSW', SELF%PHRSW, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PHRLW', SELF%PHRLW, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PVERVEL', SELF%PVERVEL, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PAP', SELF%PAP, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PAPH', SELF%PAPH, KLON, SELF%KLEV+1, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PLSM', SELF%PLSM, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('LDCUM', SELF%LDCUM, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('KTYPE', SELF%KTYPE, KLON, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PLU', SELF%PLU, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PLUDE', SELF%PLUDE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PSNDE', SELF%PSNDE, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PMFU', SELF%PMFU, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PMFD', SELF%PMFD, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PA', SELF%PA, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PCLV', SELF%PCLV, KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOAD_AND_EXPAND_ATLAS('PSUPSAT', SELF%PSUPSAT, KLON, SELF%KLEV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
     ! Note: The 0-sized array (KFLDX=0) seems to create problems when filled with
     ! data from the C-backend, causing memory corruption if enabled.
-    ! CALL LOAD_AND_EXPAND('PEXTRA', SELF%PEXTRA, KLON, SELF%KLEV, SELF%KFLDX, NPROMA, NGPTOT, SELF%NBLOCKS)
+    !CALL LOAD_AND_EXPAND('PEXTRA', SELF%PEXTRA, KLON, SELF%KLEV, SELF%KFLDX, NPROMA, NGPTOT, SELF%NBLOCKS)
+
+!    FSTATE = atlas_State();
+!    FIELD = FSPACE%create_field(name="TENDENCY_CML"    , kind=atlas_real(JPRB))
+!    CALL FIELD%DATA(SELF%TENDENCY_CML)
+!    CALL FSTATE%add(FIELD)
+!    FIELD = FSPACE%create_field(name="TENDENCY_TMP"    , kind=atlas_real(JPRB))
+!    CALL FIELD%DATA(SELF%TENDENCY_TMP)
+!    CALL FSTATE%add(FIELD)
+!    FIELD = FSPACE%create_field(name="TENDENCY_LOC"    , kind=atlas_real(JPRB))
+!    CALL FIELD%DATA(SELF%TENDENCY_LOC)
+!    CALL FSTATE%add(FIELD)
 
     ! The STATE_TYPE arrays are tricky, as the AOSOA layout needs to be expictly
     ! unrolled at every step, and we rely on dirty hackery to do this.
@@ -237,6 +392,7 @@ CONTAINS
          & KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
     CALL LOAD_AND_EXPAND_STATE('TENDENCY_TMP', SELF%TENDENCY_TMP, SELF%B_TMP, &
          & KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+
 
     ! Output fields are simply allocated and zero'd
     CALL FIELD_INIT(SELF%PRAINFRAC_TOPRFZ, NPROMA, SELF%NBLOCKS)
