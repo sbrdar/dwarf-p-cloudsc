@@ -247,8 +247,7 @@ CONTAINS
     CALL LOAD_SCALAR('KLEV', SELF%KLEV)
     CALL LOAD_SCALAR('KFLDX', SELF%KFLDX)
 
-    !! Temporary hack is L256x64, needs
-    GRID = ATLAS_StructuredGrid("L512x32")
+    GRID = ATLAS_RegularLonLatGrid(16384, 1)
     FSPACE = atlas_functionspace_BlockStructuredColumns(grid, levels=SELF%KLEV, nproma=NPROMA, halo=0)
     FSET = atlas_FieldSet();
     FIELD = FSPACE%create_field(name="PLCRIT_AER", kind=atlas_real(JPRB))
