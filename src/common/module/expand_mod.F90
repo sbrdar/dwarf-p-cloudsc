@@ -105,10 +105,11 @@ contains
 
   subroutine loadvar_atlas(fset, name, nlon, ngptotg)
     ! Load into the local memory buffer and expand to global field
-    type(atlas_fieldset), intent(in) :: fset
+    type(atlas_fieldset), intent(inout) :: fset
     character(len=*), intent(in) :: name
     integer(kind=jpim), intent(in) :: nlon
     integer(kind=jpim), intent(in), optional :: ngptotg
+
     integer(kind=jpim) :: start, end, size, nlev, nproma, ngptot, nblocks, ndim
     type(atlas_field) :: field
     real(kind=jprb), allocatable :: buffer_r1(:), buffer_r2(:,:), buffer_r3(:,:,:)
@@ -122,7 +123,7 @@ contains
 
     field = fset%field(name)
     ndim = field%rank()
-    lfield = (name == "LSDUM")
+    lfield = (name == "LDCUM")
     ifield = (name == "KTYPE")
     rfield = ((.not. lfield) .and. (.not. ifield))
 
@@ -130,6 +131,7 @@ contains
     nlev = field%levels()
     nproma = fspace%block_size(1)
     ngptot = fspace%size()
+    nblocks = fspace%nblks()
 
     if (ndim == 2) then
       call get_offsets(start, end, size, nlon, 1, 1, ngptot, ngptotg)
@@ -137,19 +139,19 @@ contains
         allocate(buffer_r1(size))
         call field%data(field_r1)
         call load_array(name, start, end, size, nlon, buffer_r1)
-        call expand(buffer_r1, field_r1, size, nproma, ngptot, ngptotg)
+        call expand(buffer_r1, field_r1, size, nproma, ngptot, nblocks)
         deallocate(buffer_r1)
       else if (lfield) then
         allocate(buffer_l1(size))
         call field%data(field_l1)
         call load_array(name, start, end, size, nlon, buffer_l1)
-        call expand(buffer_l1, field_l1, size, nproma, ngptot, ngptotg)
+        call expand(buffer_l1, field_l1, size, nproma, ngptot, nblocks)
         deallocate(buffer_l1)
       else
         allocate(buffer_i1(size))
         call field%data(field_i1)
         call load_array(name, start, end, size, nlon, buffer_i1)
-        call expand(buffer_i1, field_i1, size, nproma, ngptot, ngptotg)
+        call expand(buffer_i1, field_i1, size, nproma, ngptot, nblocks)
         deallocate(buffer_i1)
       endif
     else if (ndim == 3) then

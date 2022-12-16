@@ -251,14 +251,10 @@ CONTAINS
     GRID = ATLAS_RegularLonLatGrid(NGPTOT, 1)
     FSPACE = atlas_functionspace_BlockStructuredColumns(grid, levels=SELF%KLEV, nproma=NPROMA, halo=0)
     FSET = atlas_FieldSet();
+
     FIELD = FSPACE%create_field(name="PLCRIT_AER", kind=atlas_real(JPRB))
     CALL FIELD%DATA(SELF%PLCRIT_AER)
     CALL FSET%add(FIELD)
-
-    PRINT *, "KLON = ", KLON
-    PRINT *, "KLEV = ", SELF%KLEV
-    PRINT *, GRID%SIZE()
-    
     FIELD = FSPACE%create_field(name="PICRIT_AER", kind=atlas_real(JPRB))
     CALL FIELD%DATA(SELF%PICRIT_AER)
     CALL FSET%add(FIELD)
@@ -376,7 +372,7 @@ CONTAINS
     CALL LOADVAR_ATLAS(FSET, 'PA', KLON, NGPTOTG)
     CALL LOADVAR_ATLAS(FSET, 'PCLV', KLON, NGPTOTG)
     CALL LOADVAR_ATLAS(FSET, 'PSUPSAT', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PEXTRA', KLON, NGPTOTG)
+    !CALL LOADVAR_ATLAS(FSET, 'PEXTRA', KLON, NGPTOTG)
 
 !    FSTATE = atlas_State();
 !    FIELD = FSPACE%create_field(name="TENDENCY_CML"    , kind=atlas_real(JPRB))
