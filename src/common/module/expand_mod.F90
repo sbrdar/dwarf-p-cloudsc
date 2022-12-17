@@ -110,7 +110,7 @@ contains
     integer(kind=jpim), intent(in) :: nlon
     integer(kind=jpim), intent(in), optional :: ngptotg
 
-    integer(kind=jpim) :: start, end, size, nlev, nproma, ngptot, nblocks, ndim
+    integer(kind=jpim) :: start, end, size, nlev, nproma, ngptot, nblocks, ndim, frank
     type(atlas_field) :: field
     real(kind=jprb), allocatable :: buffer_r1(:), buffer_r2(:,:), buffer_r3(:,:,:)
     integer(kind=jpim), allocatable :: buffer_i1(:)
@@ -122,7 +122,7 @@ contains
     logical :: lfield, rfield, ifield
 
     field = fset%field(name)
-    ndim = field%rank()
+    frank = field%rank()
     lfield = (name == "LDCUM")
     ifield = (name == "KTYPE")
     rfield = ((.not. lfield) .and. (.not. ifield))
@@ -133,7 +133,7 @@ contains
     ngptot = fspace%size()
     nblocks = fspace%nblks()
 
-    if (ndim == 2) then
+    if (frank == 2) then
       call get_offsets(start, end, size, nlon, 1, 1, ngptot, ngptotg)
       if (rfield) then
         allocate(buffer_r1(size))
@@ -154,7 +154,7 @@ contains
         call expand(buffer_i1, field_i1, size, nproma, ngptot, nblocks)
         deallocate(buffer_i1)
       endif
-    else if (ndim == 3) then
+    else if (frank == 3) then
       call get_offsets(start, end, size, nlon, 1, nlev, ngptot, ngptotg)
       if (rfield) then
         call field%data(field_r2)
@@ -165,7 +165,8 @@ contains
       else
          call exit(1)
       endif
-    else if (ndim == 4) then
+    else if (frank == 4) then
+      ndim = field%shape(3)
       call get_offsets(start, end, size, nlon, ndim, nlev, ngptot, ngptotg)
       if (rfield) then
         call field%data(field_r3)
