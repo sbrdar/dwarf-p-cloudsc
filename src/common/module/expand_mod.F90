@@ -162,8 +162,6 @@ contains
         call load_array(name, start, end, size, nlon, nlev, buffer_r2)
         call expand(buffer_r2, field_r2, size, nproma, nlev, ngptot, nblocks)
         deallocate(buffer_r2)
-      else
-         call exit(1)
       endif
     else if (frank == 4) then
       ndim = field%shape(3)
@@ -174,8 +172,6 @@ contains
         call load_array(name, start, end, size, nlon, nlev, ndim, buffer_r3)
         call expand(buffer_r3, field_r3, size, nproma, nlev, ndim, ngptot, nblocks)
         deallocate(buffer_r3)
-      else
-         call exit(1)
       endif
     endif
   end subroutine loadvar_atlas
@@ -214,42 +210,55 @@ contains
     deallocate(buffer)
   end subroutine load_and_expand_r3
 
-  subroutine load_and_expand_state_atlas(name, state, field, nlon, nlev, ndim, nproma, ngptot, nblocks, ngptotg)
+  subroutine loadstate_atlas(fset, name, state, nlon, ngptotg)
     ! Load into the local memory buffer and expand to global field
+    type(atlas_fieldset), intent(inout) :: fset
     character(len=*) :: name
-    type(state_type), pointer, intent(inout) :: state(:)
-    real(kind=JPRB), allocatable, target, intent(inout) :: field(:,:,:,:)
-    integer(kind=jpim), intent(in) :: nlon, nlev, ndim, nproma, ngptot, nblocks
+    type(state_type), allocatable, intent(inout) :: state(:)
+    integer(kind=jpim), intent(in) :: nlon
     integer(kind=jpim), intent(in), optional :: ngptotg
-    real(kind=jprb), allocatable :: buffer(:,:,:)
-    integer(kind=jpim) :: start, end, size
 
     integer :: b
+    integer(kind=jpim) :: start, end, size, nlev, nproma, ngptot, nblocks, ndim
+    type(atlas_field) :: field
+    type(atlas_functionspace_blockstructuredcolumns) :: fspace
+
+    real(kind=jprb), allocatable :: buffer(:,:,:)
+    real(c_double), pointer :: field_r3(:,:,:,:)
+
+    field = fset%field(name)
+    fspace = field%functionspace()
+    nlev = field%levels()
+    nproma = fspace%block_size(1)
+    ngptot = fspace%size()
+    nblocks = fspace%nblks()
+    ndim = field%shape(3) - 3
 
     call get_offsets(start, end, size, nlon, ndim, nlev, ngptot, ngptotg)
-    if (.not. allocated(field))  allocate(field(nproma, nlev, 3+ndim, nblocks))
     allocate(buffer(size, nlev, 3+ndim))
+    if (.not. allocated(state))  allocate(state(nblocks))
+    call field%data(field_r3)
 
     call load_array(name//'_T', start, end, size, nlon, nlev, buffer(:,:,1))
     call load_array(name//'_A', start, end, size, nlon, nlev, buffer(:,:,2))
     call load_array(name//'_Q', start, end, size, nlon, nlev, buffer(:,:,3))
     call load_array(name//'_CLD', start, end, size, nlon, nlev, ndim, buffer(:,:,4:))
 
-    call expand(buffer(:,:,1), field(:,:,1,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,2), field(:,:,2,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,3), field(:,:,3,:), size, nproma, nlev, ngptot, nblocks)
-    call expand(buffer(:,:,4:), field(:,:,4:,:), size, nproma, nlev, ndim, ngptot, nblocks)
+    call expand(buffer(:,:,1), field_r3(:,:,1,:), size, nproma, nlev, ngptot, nblocks)
+    call expand(buffer(:,:,2), field_r3(:,:,2,:), size, nproma, nlev, ngptot, nblocks)
+    call expand(buffer(:,:,3), field_r3(:,:,3,:), size, nproma, nlev, ngptot, nblocks)
+    call expand(buffer(:,:,4:), field_r3(:,:,4:,:), size, nproma, nlev, ndim, ngptot, nblocks)
     deallocate(buffer)
 
 !$OMP PARALLEL DO DEFAULT(SHARED), PRIVATE(B) schedule(runtime)
     do b=1, nblocks
-       state(b)%t => field(:,:,1,b)
-       state(b)%a => field(:,:,2,b)
-       state(b)%q => field(:,:,3,b)
-       state(b)%cld => field(:,:,4:3+ndim,b)
+       state(b)%t => field_r3(:,:,1,b)
+       state(b)%a => field_r3(:,:,2,b)
+       state(b)%q => field_r3(:,:,3,b)
+       state(b)%cld => field_r3(:,:,4:3+ndim,b)
     end do
 !$OMP end parallel do
-  end subroutine load_and_expand_state_atlas
+  end subroutine loadstate_atlas
 
   subroutine load_and_expand_state(name, state, field, nlon, nlev, ndim, nproma, ngptot, nblocks, ngptotg)
     ! Load into the local memory buffer and expand to global field

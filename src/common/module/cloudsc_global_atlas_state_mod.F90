@@ -18,7 +18,7 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
 
   USE FILE_IO_MOD, ONLY: INPUT_INITIALIZE, INPUT_FINALIZE, LOAD_SCALAR, LOAD_ARRAY
   USE EXPAND_MOD, ONLY: LOAD_AND_EXPAND, LOAD_AND_EXPAND_STATE, &
-      & LOADVAR_ATLAS, LOAD_AND_EXPAND_STATE_ATLAS
+      & LOADVAR_ATLAS, LOADSTATE_ATLAS
   USE VALIDATE_MOD, ONLY: VALIDATE
   USE CLOUDSC_MPI_MOD, ONLY: IRANK
 
@@ -31,7 +31,6 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
   TYPE(ATLAS_STRUCTUREDGRID) :: GRID
   TYPE(ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS) :: FSPACE
   TYPE(ATLAS_FIELDSET) :: FSET
-  TYPE(ATLAS_STATE) :: FSTATE
 
   TYPE CLOUDSC_GLOBAL_ATLAS_STATE
     ! Memory state containing raw fields annd tendencies for CLOUDSC dwarf
@@ -54,9 +53,6 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
 
     REAL(c_double), POINTER :: PT(:,:,:)       ! T at start of callpar
     REAL(c_double), POINTER :: PQ(:,:,:)       ! Q at start of callpar
-    !REAL(c_double), POINTER :: TENDENCY_CML(:) ! cumulative tendency used for final output
-    !REAL(c_double), POINTER :: TENDENCY_TMP(:) ! cumulative tendency used as input
-    !REAL(c_double), POINTER :: TENDENCY_LOC(:) ! local tendency from cloud scheme
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_CML(:) ! cumulative tendency used for final output
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_TMP(:) ! cumulative tendency used as input
     TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_LOC(:) ! local tendency from cloud scheme
@@ -72,11 +68,8 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(c_double), POINTER :: PAP(:,:,:)      ! Pressure on full levels
     REAL(c_double), POINTER :: PAPH(:,:,:)     ! Pressure on half levels
     REAL(c_double), POINTER :: PLSM(:,:)       ! Land fraction (0-1) 
-    LOGICAL, POINTER :: LDCUM(:,:)      ! Convection active
-!    INTEGER(c_int), POINTER :: LDCUM(:,:)   ! Convection type 0,1,2
-    INTEGER(c_int), POINTER :: KTYPE(:,:)   ! Convection type 0,1,2
-!    LOGICAL, ALLOCATABLE :: LDCUM(:,:)      ! Convection active
-!    INTEGER(KIND=JPIM), ALLOCATABLE :: KTYPE(:,:)   ! Convection type 0,1,2
+    LOGICAL,        POINTER :: LDCUM(:,:)      ! Convection active
+    INTEGER(c_int), POINTER :: KTYPE(:,:)      ! Convection type 0,1,2
     REAL(c_double), POINTER :: PLU(:,:,:)      ! Conv. condensate
     REAL(c_double), POINTER :: PLUDE(:,:,:)    ! Conv. detrained water 
     REAL(c_double), POINTER :: PSNDE(:,:,:)    ! Conv. detrained snow
@@ -88,6 +81,7 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(c_double), POINTER :: PSUPSAT(:,:,:)
 
     ! Output fields used for validation
+    !REAL(C_DOUBLE), POINTER :: PCOVPTOT(:,:,:) ! Precip fraction
     REAL(KIND=JPRB), ALLOCATABLE :: PCOVPTOT(:,:,:) ! Precip fraction
     REAL(KIND=JPRB), ALLOCATABLE :: PRAINFRAC_TOPRFZ(:,:) 
     REAL(KIND=JPRB), ALLOCATABLE :: PFSQLF(:,:,:)   ! Flux of liquid
@@ -106,11 +100,11 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(KIND=JPRB), ALLOCATABLE :: PFHPSN(:,:,:)   ! Enthalp flux for ice
 
     ! Underlying data buffers for AOSOA allcoated STATE_TYPE arrays
-!    REAL(c_double), POINTER :: B_CML(:,:,:,:)
-!    REAL(c_double), POINTER :: B_TMP(:,:,:,:)
+    REAL(c_double), POINTER :: B_CML(:,:,:,:)
+    REAL(c_double), POINTER :: B_TMP(:,:,:,:)
 !    REAL(c_double), POINTER :: B_LOC(:,:,:,:)
-    REAL(KIND=JPRB), ALLOCATABLE :: B_CML(:,:,:,:)
-    REAL(KIND=JPRB), ALLOCATABLE :: B_TMP(:,:,:,:)
+!    REAL(KIND=JPRB), ALLOCATABLE :: B_CML(:,:,:,:)
+ !   REAL(KIND=JPRB), ALLOCATABLE :: B_TMP(:,:,:,:)
     REAL(KIND=JPRB), ALLOCATABLE :: B_LOC(:,:,:,:)
   CONTAINS
     PROCEDURE :: LOAD => CLOUDSC_GLOBAL_ATLAS_STATE_LOAD
@@ -374,24 +368,21 @@ CONTAINS
     CALL LOADVAR_ATLAS(FSET, 'PSUPSAT', KLON, NGPTOTG)
     !CALL LOADVAR_ATLAS(FSET, 'PEXTRA', KLON, NGPTOTG)
 
-!    FSTATE = atlas_State();
-!    FIELD = FSPACE%create_field(name="TENDENCY_CML"    , kind=atlas_real(JPRB))
-!    CALL FIELD%DATA(SELF%TENDENCY_CML)
-!    CALL FSTATE%add(FIELD)
-!    FIELD = FSPACE%create_field(name="TENDENCY_TMP"    , kind=atlas_real(JPRB))
-!    CALL FIELD%DATA(SELF%TENDENCY_TMP)
-!    CALL FSTATE%add(FIELD)
-!    FIELD = FSPACE%create_field(name="TENDENCY_LOC"    , kind=atlas_real(JPRB))
-!    CALL FIELD%DATA(SELF%TENDENCY_LOC)
+    FIELD = FSPACE%create_field(name='TENDENCY_CML'    , kind=atlas_real(JPRB), variables=3+NCLV) ! state is 3+ndim
+    CALL FIELD%DATA(SELF%B_CML)
+    CALL FSET%add(FIELD)
+    FIELD = FSPACE%create_field(name='TENDENCY_TMP'    , kind=atlas_real(JPRB), variables=3+NCLV)
+    CALL FIELD%DATA(SELF%B_TMP)
+    CALL FSET%add(FIELD)
+!    FIELD = FSPACE%create_field(name='B_LOC'    , kind=atlas_real(JPRB))
+!    CALL FIELD%DATA(SELF%B_LOC)
 !    CALL FSTATE%add(FIELD)
 
     ! The STATE_TYPE arrays are tricky, as the AOSOA layout needs to be expictly
     ! unrolled at every step, and we rely on dirty hackery to do this.
     CALL FIELD_INIT(SELF%TENDENCY_LOC, SELF%B_LOC, NPROMA, SELF%KLEV, NCLV, SELF%NBLOCKS)
-    CALL LOAD_AND_EXPAND_STATE('TENDENCY_CML', SELF%TENDENCY_CML, SELF%B_CML, &
-         & KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
-    CALL LOAD_AND_EXPAND_STATE('TENDENCY_TMP', SELF%TENDENCY_TMP, SELF%B_TMP, &
-         & KLON, SELF%KLEV, NCLV, NPROMA, NGPTOT, SELF%NBLOCKS, NGPTOTG)
+    CALL LOADSTATE_ATLAS(FSET, 'TENDENCY_CML', SELF%TENDENCY_CML, KLON, NGPTOTG)
+    CALL LOADSTATE_ATLAS(FSET, 'TENDENCY_TMP', SELF%TENDENCY_TMP, KLON, NGPTOTG)
 
 
     ! Output fields are simply allocated and zero'd
