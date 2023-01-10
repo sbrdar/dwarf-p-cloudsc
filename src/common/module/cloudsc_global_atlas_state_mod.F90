@@ -32,6 +32,18 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
   TYPE(ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS) :: FSPACE
   TYPE(ATLAS_FIELDSET) :: FSET
 
+  TYPE VAR3D_PTR
+      REAL(C_DOUBLE), POINTER :: PTR(:,:,:)
+  END TYPE
+
+  ! note: the last six variables have special types
+  CHARACTER(LEN=10), PARAMETER, DIMENSION(30) :: VAR_NAMES = (/ &
+      "PLCRIT_AER", "PICRIT_AER", "PRE_ICE   ", "PCCN      ", "PNICE     ", "PT        ", "PQ        ", &
+      "PVFA      ", "PVFL      ", "PVFI      ", "PDYNA     ", "PDYNL     ", "PDYNI     ", "PHRSW     ", &
+      "PHRLW     ", "PVERVEL   ", "PAP       ", "PLU       ", "PLUDE     ", "PSNDE     ", "PMFU      ", &
+      "PMFD      ", "PA        ", "PSUPSAT   ", &
+      "PLSM      ", "LDCUM     ", "KTYPE     ", "PAPH      ", "PEXTRA    ", "PCLV      " /)
+
   TYPE CLOUDSC_GLOBAL_ATLAS_STATE
     ! Memory state containing raw fields annd tendencies for CLOUDSC dwarf
     !
@@ -44,18 +56,16 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     LOGICAL                              :: LDMAINCALL      ! T if main call to cloudsc
     REAL(KIND=JPRB)                      :: PTSPHY          ! Physics timestep
 
+    TYPE(VAR3D_PTR), DIMENSION(24) :: VARS_3D_REAL64
+
     ! Input field variables and tendencies
     REAL(c_double), POINTER :: PLCRIT_AER(:,:,:)
     REAL(c_double), POINTER :: PICRIT_AER(:,:,:) 
     REAL(c_double), POINTER :: PRE_ICE(:,:,:) 
     REAL(c_double), POINTER :: PCCN(:,:,:)     ! liquid cloud condensation nuclei
     REAL(c_double), POINTER :: PNICE(:,:,:)    ! ice number concentration (cf. CCN)
-
     REAL(c_double), POINTER :: PT(:,:,:)       ! T at start of callpar
     REAL(c_double), POINTER :: PQ(:,:,:)       ! Q at start of callpar
-    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_CML(:) ! cumulative tendency used for final output
-    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_TMP(:) ! cumulative tendency used as input
-    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_LOC(:) ! local tendency from cloud scheme
     REAL(c_double), POINTER :: PVFA(:,:,:)     ! CC from VDF scheme
     REAL(c_double), POINTER :: PVFL(:,:,:)     ! Liq from VDF scheme
     REAL(c_double), POINTER :: PVFI(:,:,:)     ! Ice from VDF scheme
@@ -66,19 +76,24 @@ MODULE CLOUDSC_GLOBAL_ATLAS_STATE_MOD
     REAL(c_double), POINTER :: PHRLW(:,:,:)    ! Long-wave heating rate
     REAL(c_double), POINTER :: PVERVEL(:,:,:)  ! Vertical velocity
     REAL(c_double), POINTER :: PAP(:,:,:)      ! Pressure on full levels
-    REAL(c_double), POINTER :: PAPH(:,:,:)     ! Pressure on half levels
-    REAL(c_double), POINTER :: PLSM(:,:)       ! Land fraction (0-1) 
-    LOGICAL,        POINTER :: LDCUM(:,:)      ! Convection active
-    INTEGER(c_int), POINTER :: KTYPE(:,:)      ! Convection type 0,1,2
     REAL(c_double), POINTER :: PLU(:,:,:)      ! Conv. condensate
     REAL(c_double), POINTER :: PLUDE(:,:,:)    ! Conv. detrained water 
     REAL(c_double), POINTER :: PSNDE(:,:,:)    ! Conv. detrained snow
     REAL(c_double), POINTER :: PMFU(:,:,:)     ! Conv. mass flux up
     REAL(c_double), POINTER :: PMFD(:,:,:)     ! Conv. mass flux down
     REAL(c_double), POINTER :: PA(:,:,:)       ! Original Cloud fraction (t)
+    REAL(c_double), POINTER :: PSUPSAT(:,:,:)
+
+    REAL(c_double), POINTER :: PLSM(:,:)       ! Land fraction (0-1) 
+    LOGICAL,        POINTER :: LDCUM(:,:)      ! Convection active
+    INTEGER(c_int), POINTER :: KTYPE(:,:)      ! Convection type 0,1,2
+    REAL(c_double), POINTER :: PAPH(:,:,:)     ! Pressure on half levels
     REAL(c_double), POINTER :: PEXTRA(:,:,:,:) ! extra fields
     REAL(c_double), POINTER :: PCLV(:,:,:,:) 
-    REAL(c_double), POINTER :: PSUPSAT(:,:,:)
+
+    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_CML(:) ! cumulative tendency used for final output
+    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_TMP(:) ! cumulative tendency used as input
+    TYPE(STATE_TYPE), ALLOCATABLE :: TENDENCY_LOC(:) ! local tendency from cloud scheme
 
     ! Output fields used for validation
     !REAL(C_DOUBLE), POINTER :: PCOVPTOT(:,:,:) ! Precip fraction
@@ -234,7 +249,6 @@ CONTAINS
 
     INTEGER(KIND=JPIM) :: KLON
     TYPE(ATLAS_FIELD) :: FIELD
-    CHARACTER(len=10), DIMENSION(24) :: VAR3D_FL_NAMES
     INTEGER :: IVAR
 
     CALL INPUT_INITIALIZE(NAME='input')
@@ -248,13 +262,8 @@ CONTAINS
     SELF%NBLOCKS = FSPACE%NBLKS()
     FSET = ATLAS_FIELDSET();
 
-    VAR3D_FL_NAMES = (/ &
-        "PLCRIT_AER", "PICRIT_AER", "PRE_ICE   ", "PCCN      ", "PNICE     ", "PT        ", "PQ        ", &
-        "PVFA      ", "PVFL      ", "PVFI      ", "PDYNA     ", "PDYNL     ", "PDYNI     ", "PHRSW     ", &
-        "PHRLW     ", "PVERVEL   ", "PAP       ", "PLU       ", "PLUDE     ", "PSNDE     ", "PMFU      ", &
-        "PMFD      ", "PA        ", "PSUPSAT   " /)
-    DO IVAR = 1, SIZE(VAR3D_FL_NAMES)
-        CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME=TRIM(VAR3D_FL_NAMES(IVAR)), KIND=ATLAS_REAL(JPRB)))
+    DO IVAR = 1, SIZE(VAR_NAMES) - 6 ! last six variables are special
+        CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME=TRIM(VAR_NAMES(IVAR)), KIND=ATLAS_REAL(JPRB)))
     ENDDO
     CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME="PLSM",   KIND=ATLAS_REAL(JPRB),    LEVELS=0))
     CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME="LDCUM",  KIND=ATLAS_LOGICAL(),     LEVELS=0))
@@ -262,98 +271,53 @@ CONTAINS
     CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME="PAPH",   KIND=ATLAS_REAL(JPRB),    LEVELS=SELF%KLEV+1))
     CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME="PEXTRA", KIND=ATLAS_REAL(JPRB),    VARIABLES=MAX(1,SELF%KFLDX)))
     CALL FSET%ADD(FSPACE%CREATE_FIELD(NAME="PCLV",   KIND=ATLAS_REAL(JPRB),    VARIABLES=MAX(1,NCLV)))
+
+    DO IVAR = 1, SIZE(SELF%VARS_3D_REAL64)
+        FIELD = FSET%FIELD(TRIM(VAR_NAMES(IVAR)))
+        CALL FIELD%DATA(SELF%VARS_3D_REAL64(IVAR)%PTR)
+    ENDDO
     
-    FIELD = FSET%FIELD("PLCRIT_AER")
-    CALL FIELD%DATA(SELF%PLCRIT_AER)
-    FIELD = FSET%FIELD("PICRIT_AER")
-    CALL FIELD%DATA(SELF%PICRIT_AER)
-    FIELD = FSET%FIELD("PRE_ICE")
-    CALL FIELD%DATA(SELF%PRE_ICE)
-    FIELD = FSET%FIELD("PCCN")
-    CALL FIELD%DATA(SELF%PCCN)
-    FIELD = FSET%FIELD("PNICE")
-    CALL FIELD%DATA(SELF%PNICE)
-    FIELD = FSET%FIELD("PT")
-    CALL FIELD%DATA(SELF%PT)
-    FIELD = FSET%FIELD("PQ")
-    CALL FIELD%DATA(SELF%PQ)
-    FIELD = FSET%FIELD("PVFA")
-    CALL FIELD%DATA(SELF%PVFA)
-    FIELD = FSET%FIELD("PVFL")
-    CALL FIELD%DATA(SELF%PVFL)
-    FIELD = FSET%FIELD("PVFI")
-    CALL FIELD%DATA(SELF%PVFI)
-    FIELD = FSET%FIELD("PDYNA")
-    CALL FIELD%DATA(SELF%PDYNA)
-    FIELD = FSET%FIELD("PDYNL")
-    CALL FIELD%DATA(SELF%PDYNL)
-    FIELD = FSET%FIELD("PDYNI")
-    CALL FIELD%DATA(SELF%PDYNI)
-    FIELD = FSET%FIELD("PHRSW")
-    CALL FIELD%DATA(SELF%PHRSW)
-    FIELD = FSET%FIELD("PHRLW")
-    CALL FIELD%DATA(SELF%PHRLW)
-    FIELD = FSET%FIELD("PVERVEL")
-    CALL FIELD%DATA(SELF%PVERVEL)
-    FIELD = FSET%FIELD("PAP")
-    CALL FIELD%DATA(SELF%PAP)
-    FIELD = FSET%FIELD("PAPH")
-    CALL FIELD%DATA(SELF%PAPH)
+    SELF%PLCRIT_AER => SELF%VARS_3D_REAL64(1)%PTR
+    SELF%PICRIT_AER => SELF%VARS_3D_REAL64(2)%PTR
+    SELF%PRE_ICE    => SELF%VARS_3D_REAL64(3)%PTR
+    SELF%PCCN       => SELF%VARS_3D_REAL64(4)%PTR
+    SELF%PNICE      => SELF%VARS_3D_REAL64(5)%PTR
+    SELF%PT         => SELF%VARS_3D_REAL64(6)%PTR
+    SELF%PQ         => SELF%VARS_3D_REAL64(7)%PTR
+    SELF%PVFA       => SELF%VARS_3D_REAL64(8)%PTR
+    SELF%PVFL       => SELF%VARS_3D_REAL64(9)%PTR
+    SELF%PVFI       => SELF%VARS_3D_REAL64(10)%PTR
+    SELF%PDYNA      => SELF%VARS_3D_REAL64(11)%PTR
+    SELF%PDYNL      => SELF%VARS_3D_REAL64(12)%PTR
+    SELF%PDYNI      => SELF%VARS_3D_REAL64(13)%PTR
+    SELF%PHRSW      => SELF%VARS_3D_REAL64(14)%PTR
+    SELF%PHRLW      => SELF%VARS_3D_REAL64(15)%PTR
+    SELF%PVERVEL    => SELF%VARS_3D_REAL64(16)%PTR
+    SELF%PAP        => SELF%VARS_3D_REAL64(17)%PTR
+    SELF%PLU        => SELF%VARS_3D_REAL64(18)%PTR
+    SELF%PLUDE      => SELF%VARS_3D_REAL64(19)%PTR
+    SELF%PSNDE      => SELF%VARS_3D_REAL64(20)%PTR
+    SELF%PMFU       => SELF%VARS_3D_REAL64(21)%PTR
+    SELF%PMFD       => SELF%VARS_3D_REAL64(22)%PTR
+    SELF%PA         => SELF%VARS_3D_REAL64(23)%PTR
+    SELF%PSUPSAT    => SELF%VARS_3D_REAL64(24)%PTR
+
     FIELD = FSET%FIELD("PLSM")
     CALL FIELD%DATA(SELF%PLSM)
     FIELD = FSET%FIELD("LDCUM")
     CALL FIELD%DATA(SELF%LDCUM)
     FIELD = FSET%FIELD("KTYPE")
     CALL FIELD%DATA(SELF%KTYPE)
-    FIELD = FSET%FIELD("PLU")
-    CALL FIELD%DATA(SELF%PLU)
-    FIELD = FSET%FIELD("PLUDE")
-    CALL FIELD%DATA(SELF%PLUDE)
-    FIELD = FSET%FIELD("PSNDE")
-    CALL FIELD%DATA(SELF%PSNDE)
-    FIELD = FSET%FIELD("PMFU")
-    CALL FIELD%DATA(SELF%PMFU)
-    FIELD = FSET%FIELD("PMFD")
-    CALL FIELD%DATA(SELF%PMFD)
-    FIELD = FSET%FIELD("PA")
-    CALL FIELD%DATA(SELF%PA)
+    FIELD = FSET%FIELD("PAPH")
+    CALL FIELD%DATA(SELF%PAPH)
     FIELD = FSET%FIELD("PEXTRA")
     CALL FIELD%DATA(SELF%PEXTRA)
     FIELD = FSET%FIELD("PCLV")
     CALL FIELD%DATA(SELF%PCLV)
-    FIELD = FSET%FIELD("PSUPSAT")
-    CALL FIELD%DATA(SELF%PSUPSAT)
 
-    CALL LOADVAR_ATLAS(FSET, 'PLCRIT_AER', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PICRIT_AER', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PRE_ICE', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PCCN', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PNICE', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PT', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PQ', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PVFA', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PVFL', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PVFI', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PDYNA', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PDYNL', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PDYNI', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PHRSW', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PHRLW', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PVERVEL', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PAP', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PAPH', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PLSM', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'LDCUM', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'KTYPE', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PLU', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PLUDE', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PSNDE', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PMFU', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PMFD', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PA', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PCLV', KLON, NGPTOTG)
-    CALL LOADVAR_ATLAS(FSET, 'PSUPSAT', KLON, NGPTOTG)
-    !CALL LOADVAR_ATLAS(FSET, 'PEXTRA', KLON, NGPTOTG)
+    DO IVAR = 1, SIZE(VAR_NAMES)
+        CALL LOADVAR_ATLAS(FSET, TRIM(VAR_NAMES(IVAR)), KLON, NGPTOTG)
+    ENDDO
 
     FIELD = FSPACE%CREATE_FIELD(NAME='TENDENCY_CML', KIND=ATLAS_REAL(JPRB), VARIABLES=3+NCLV) ! state is 3+ndim
     CALL FIELD%DATA(SELF%B_CML)
