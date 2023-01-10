@@ -133,6 +133,20 @@ CONTAINS
          PCOVPTOT(:,:,IBL) = 0.0_JPRB
          TENDENCY_LOC(IBL)%cld(:,:,NCLV) = 0.0_JPRB
 
+        !--- a future plan to replace the call to CLOUDSC ------ 
+        !
+        ! type( block_state_t )
+        !   real(c_double), pointer :: PT(:,:)
+        !   type(state_type) :: tendency_LOC
+        !   type(state_type) :: tendency_TMP
+        !   type(state_type) :: tendency_CML
+        ! end type
+
+        ! call extract_block( FSET, IBL, config, block_state )
+        !     call FSET%FIELD("PT")%BLOCK_DATA(IBL,PT,CONFIG)
+        !     call FSET%FIELD("PQ")%BLOCK_DATA(IBL,PQ,CONFIG)
+        ! call cloudsc_atlas ( FSET, IBL, config )
+
          CALL CLOUDSC &
               & (    1,    ICEND,    NPROMA,  NLEV,&
               & PTSPHY,&
@@ -156,6 +170,8 @@ CONTAINS
               & PFSQLTUR(:,:,IBL), PFSQITUR (:,:,IBL), &
               & PFPLSL(:,:,IBL),   PFPLSN(:,:,IBL),   PFHPSL(:,:,IBL),   PFHPSN(:,:,IBL),&
               & KFLDX)
+
+          !--- end of a future plan to replace the call to CLOUDSC ------ 
 
          IF (LEC_PMON) THEN
            ! Sample power consuption
