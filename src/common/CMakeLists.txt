@@ -74,8 +74,6 @@ ecbuild_add_library( TARGET cloudsc-common-lib
         ${CLOUDSC_COMMON_SOURCES}
         $<${HAVE_MPI}:module/cloudsc_mpif.F90>
         $<${HAVE_HDF5}:module/hdf5_file_mod.F90>
-    LIBS
-        atlas_f
     PRIVATE_INCLUDES
         $<${HAVE_HDF5}:${HDF5_Fortran_INCLUDE_DIRS}>
     PUBLIC_INCLUDES
