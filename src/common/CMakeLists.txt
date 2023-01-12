@@ -25,11 +25,8 @@ list(APPEND CLOUDSC_COMMON_SOURCES
     module/ec_pmon_mod.F90
     module/file_io_mod.F90
     module/expand_mod.F90
-    module/expand_atlas_mod.F90
     module/validate_mod.F90
-    module/validate_atlas_mod.F90
     module/cloudsc_global_state_mod.F90
-    module/cloudsc_global_atlas_state_mod.F90
     module/cloudsc_mpi_mod.F90
 )
 
