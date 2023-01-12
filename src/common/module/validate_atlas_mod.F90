@@ -141,13 +141,13 @@ CONTAINS
           !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
           DO B=1, NBLOCKS
             BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size
-            ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R3(:,:,:,B)))
-            ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R3(:,:,:,B)))
+            ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R3(:,:,4:,B)))
+            ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R3(:,:,4:,B)))
             DO JM=1, NDIM
               DO JL=1, NLEV
                 DO JK=1, BSIZE
                   ! Difference against reference result in one-norm sense
-                  ZDIFF = ABS(FIELD_R3(JK,JL,JM,B) - REF_R4(JK,JL,JM,B))
+                  ZDIFF = ABS(FIELD_R3(JK,JL,3+JM,B) - REF_R4(JK,JL,JM,B))
                   ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
                   ZSUM_ERR_ABS(1) = ZSUM_ERR_ABS(1) + ZDIFF
                   ZSUM_ERR_ABS(2) = ZSUM_ERR_ABS(2) + ABS(REF_R4(JK,JL,JM,B))
