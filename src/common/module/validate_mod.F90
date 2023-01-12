@@ -170,7 +170,6 @@ CONTAINS
   END SUBROUTINE VALIDATE_R1
 
   SUBROUTINE VALIDATESTATE_ATLAS(FSET, NAME, NLON, NGPTOTG)
-    ! Computes and prints errors "in the L1 norm sense"
     TYPE(ATLAS_FIELDSET), INTENT(INOUT) :: FSET
     CHARACTER(*), INTENT(IN) :: NAME
     INTEGER(KIND=JPIM), INTENT(IN) :: NLON
@@ -179,9 +178,8 @@ CONTAINS
     CALL VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, "A")
     CALL VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, "Q")
     CALL VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, "T")
-!    CALL VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, "CLD")
+    CALL VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, "CLD")
   END SUBROUTINE VALIDATESTATE_ATLAS
-
 
   SUBROUTINE VALIDATEVAR_ATLAS(FSET, NAME, NLON, NGPTOTG, STATE_VAR)
     ! Computes and prints errors "in the L1 norm sense"
@@ -193,8 +191,8 @@ CONTAINS
 
     REAL(KIND=JPRB), ALLOCATABLE :: REF_R2(:,:), REF_R3(:,:,:), REF_R4(:,:,:,:)
     REAL(C_DOUBLE), POINTER :: FIELD_R1(:,:), FIELD_R2(:,:,:), FIELD_R3(:,:,:,:)
-    type(atlas_functionspace_blockstructuredcolumns) :: fspace
-    type(atlas_field) :: field
+    TYPE(ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS) :: FSPACE
+    TYPE(ATLAS_FIELD) :: FIELD
     INTEGER :: B, BSIZE, JL, JK, JM
     REAL(KIND=JPRB) :: ZMINVAL(1), ZMAX_VAL_ERR(2), ZDIFF, ZSUM_ERR_ABS(2), ZRELERR, ZAVGPGP
     INTEGER :: FRANK, NBLOCKS, NLEV, NGPTOT, NPROMA, VAR_ID, NDIM
@@ -243,7 +241,7 @@ CONTAINS
         !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
         !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
         DO B=1, NBLOCKS
-          BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size
+          BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size !! TODO ad other loops
           ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R2(:,:,B)))
           ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R2(:,:,B)))
           DO JL=1, NLEV
@@ -259,16 +257,15 @@ CONTAINS
       ELSE IF (FRANK == 4 .AND. PRESENT(STATE_VAR)) THEN
         CALL FIELD%DATA(FIELD_R3)
         NDIM = FIELD%SHAPE(3) - 3
-        SELECT CASE (STATE_VAR) 
-          CASE('T')
-              VAR_ID = 1
-          CASE('A')
-              VAR_ID = 2
-          CASE('Q')
-              VAR_ID = 3
-        END SELECT
         IF (STATE_VAR /= 'CLD') THEN
-            CALL LOAD_AND_EXPAND(NAME//'_'//STATE_VAR, REF_R3, NLON, FIELD%LEVELS(), NPROMA, NGPTOT, NBLOCKS, NGPTOTG)
+            VAR_ID = 1
+            IF (STATE_VAR == 'A') THEN
+                VAR_ID = 2
+            ENDIF
+            IF (STATE_VAR == 'Q') THEN
+                VAR_ID = 3
+            ENDIF
+            CALL LOAD_AND_EXPAND(NAME//'_'//STATE_VAR, REF_R3, NLON, NLEV, NPROMA, NGPTOT, NBLOCKS, NGPTOTG)
             !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
             !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
             DO B=1, NBLOCKS
@@ -295,7 +292,7 @@ CONTAINS
             ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R3(:,:,:,B)))
             DO JM=1, NDIM
               DO JL=1, NLEV
-                DO JK=1, bsize
+                DO JK=1, BSIZE
                   ! Difference against reference result in one-norm sense
                   ZDIFF = ABS(FIELD_R3(JK,JL,JM,B) - REF_R4(JK,JL,JM,B))
                   ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
@@ -324,7 +321,7 @@ CONTAINS
 
     IF (IRANK == 0) THEN
       CALL ERROR_PRINT(FULLNAME, ZMINVAL(1), ZMAX_VAL_ERR(1), ZMAX_VAL_ERR(2), &
-        & ZSUM_ERR_ABS(1), ZSUM_ERR_ABS(2), ZAVGPGP, NDIM=2)
+        & ZSUM_ERR_ABS(1), ZSUM_ERR_ABS(2), ZAVGPGP, NDIM=FRANK-1)
     END IF
   END SUBROUTINE VALIDATEVAR_ATLAS
 
