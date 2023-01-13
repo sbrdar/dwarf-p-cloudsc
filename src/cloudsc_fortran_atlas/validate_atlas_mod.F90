@@ -10,6 +10,7 @@
 MODULE VALIDATE_ATLAS_MOD
   USE PARKIND1, ONLY: JPIM, JPRB
   USE CLOUDSC_MPI_MOD
+  USE VALIDATE_MOD, ONLY: VALIDATE, ERROR_PRINT
 
   USE ATLAS_MODULE
   USE ATLAS_FIELDSET_MODULE
@@ -177,90 +178,5 @@ CONTAINS
         & ZSUM_ERR_ABS(1), ZSUM_ERR_ABS(2), ZAVGPGP, NDIM=FRANK-1)
     END IF
   END SUBROUTINE VALIDATEVAR_ATLAS
-
-  SUBROUTINE VALIDATE(NAME, REF, FIELD, NLON, NLEV, NDIM, NGPTOT, NBLOCKS, NGPTOTG)
-    ! Computes and prints errors "in the L1 norm sense"
-    CHARACTER(*), INTENT(IN) :: NAME
-    REAL(KIND=JPRB), INTENT(INOUT) :: REF(:,:,:,:), FIELD(:,:,:,:)
-    INTEGER(KIND=JPIM), INTENT(IN) :: NLON, NLEV, NDIM, NBLOCKS, NGPTOT
-    INTEGER(KIND=JPIM), INTENT(IN), OPTIONAL :: NGPTOTG
-
-    INTEGER :: B, BSIZE, JL, JK, JM
-    REAL(KIND=JPRB) :: ZMINVAL(1), ZMAX_VAL_ERR(2), ZDIFF, ZSUM_ERR_ABS(2), ZRELERR, ZAVGPGP
-
-    ZMINVAL(1) = +HUGE(ZMINVAL(1))
-    ZMAX_VAL_ERR(1) = -HUGE(ZMAX_VAL_ERR(1))
-    ZMAX_VAL_ERR(2) = 0.0_JPRB
-    ZSUM_ERR_ABS(:) = 0.0_JPRB
-
-    !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
-    !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
-    DO B=1, NBLOCKS
-      BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size
-      ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD(:,:,:,B)))
-      ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD(:,:,:,B)))
-      DO JM=1, NDIM
-        DO JL=1, NLEV
-          DO JK=1, bsize
-            ! Difference against reference result in one-norm sense
-            ZDIFF = ABS(FIELD(JK,JL,JM,B) - REF(JK,JL,JM,B))
-            ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
-            ZSUM_ERR_ABS(1) = ZSUM_ERR_ABS(1) + ZDIFF
-            ZSUM_ERR_ABS(2) = ZSUM_ERR_ABS(2) + ABS(REF(JK,JL,JM,B))
-          END DO
-        END DO
-      END DO
-    END DO
-
-    CALL CLOUDSC_MPI_REDUCE_MIN(ZMINVAL, 1, 0)
-    CALL CLOUDSC_MPI_REDUCE_MAX(ZMAX_VAL_ERR, 2, 0)
-    CALL CLOUDSC_MPI_REDUCE_SUM(ZSUM_ERR_ABS, 2, 0)
-
-    IF (PRESENT(NGPTOTG)) THEN
-      ZAVGPGP = ZSUM_ERR_ABS(1) / REAL(NGPTOTG,JPRB)
-    ELSE
-      ZAVGPGP = ZSUM_ERR_ABS(1) / REAL(NGPTOT,JPRB)
-    END IF
-
-    IF (IRANK == 0) THEN
-      CALL ERROR_PRINT(NAME, ZMINVAL(1), ZMAX_VAL_ERR(1), ZMAX_VAL_ERR(2), &
-        & ZSUM_ERR_ABS(1), ZSUM_ERR_ABS(2), ZAVGPGP, NDIM=3)
-    END IF
-  END SUBROUTINE VALIDATE
-
-  SUBROUTINE ERROR_PRINT(NAME, ZMINVAL, ZMAXVAL, ZMAXERR, ZERRSUM, ZSUM, ZAVGPGP, NDIM)
-    ! Print error statistic for a single variable (adapted from diff_mod.F90)
-    CHARACTER(*), INTENT(IN) :: NAME
-    REAL(KIND=JPRB), INTENT(IN) :: ZMINVAL, ZMAXVAL, ZMAXERR, ZERRSUM, ZSUM, ZAVGPGP
-    INTEGER(KIND=JPIM), INTENT(IN) :: NDIM
-    REAL(KIND=JPRB) :: zrelerr
-    REAL(KIND=JPRB), parameter :: zeps = epsilon(1.0_JPRB)
-    INTEGER :: IOPT
-    character(len=5) clwarn
-
-    iopt = 0
-    if (zerrsum < zeps) then
-      zrelerr = 0.0_JPRB
-      iopt = 1
-    elseif (zsum < zeps) then
-      zrelerr = zerrsum/(1.0_JPRB + zsum)
-      iopt = 2
-    else
-      zrelerr = zerrsum/zsum
-      iopt = 3
-    endif
-
-    !-- If you get 4 exclamation marks next to your error output,
-    !   then it is likely that some uninitialized variables exists or
-    !   some other screw-up -- watch out this !!!!
-    clwarn = ' '
-    if (zrelerr > 10.0_JPRB * zeps) clwarn = ' !!!!'
-    zrelerr = 100.0_JPRB * zrelerr
-
-    write(*,1000) name,ndim,iopt, &
-     & zminval,zmaxval, zmaxerr, zavgpgp, zrelerr, clwarn
-1000 format(1X,A20,1X,I1,'D',I1,5(1X,E20.13),A)
-
-  END SUBROUTINE ERROR_PRINT
 
 END MODULE VALIDATE_ATLAS_MOD
