@@ -14,7 +14,7 @@ MODULE VALIDATE_ATLAS_MOD
 
   USE ATLAS_MODULE
   USE ATLAS_FIELDSET_MODULE
-  use atlas_functionspace_blockstructuredcolumns_module
+  USE ATLAS_FUNCTIONSPACE_BLOCKSTRUCTUREDCOLUMNS_MODULE
   USE, INTRINSIC :: ISO_C_BINDING
   USE EXPAND_MOD, ONLY: LOAD_AND_EXPAND
   USE FILE_IO_MOD, ONLY: INPUT_INITIALIZE, INPUT_FINALIZE
@@ -78,10 +78,10 @@ CONTAINS
         !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
         !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
         DO B=1, NBLOCKS
-          BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size
+          BSIZE = FSPACE%BLOCK_SIZE(B)
           ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R1(:,B)))
           ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R1(:,B)))
-          DO JK=1, bsize
+          DO JK=1, BSIZE
             ! Difference against reference result in one-norm sense
             ZDIFF = ABS(FIELD_R1(JK,B) - REF_R2(JK,B))
             ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
@@ -95,11 +95,11 @@ CONTAINS
         !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
         !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
         DO B=1, NBLOCKS
-          BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size !! TODO ad other loops
+          BSIZE = FSPACE%BLOCK_SIZE(B)
           ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R2(:,:,B)))
           ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R2(:,:,B)))
           DO JL=1, NLEV
-            DO JK=1, bsize
+            DO JK=1, BSIZE
               ! Difference against reference result in one-norm sense
               ZDIFF = ABS(FIELD_R2(JK,JL,B) - REF_R3(JK,JL,B))
               ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
@@ -123,11 +123,11 @@ CONTAINS
             !OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(B, BSIZE) &
             !& REDUCTION(MIN:ZMINVAL, MAX:ZMAX_VAL_ERR, +:ZSUM_ERR_ABS)
             DO B=1, NBLOCKS
-              BSIZE = MIN(NLON, NGPTOT - (B-1)*NLON)  ! Field block size
+              BSIZE = FSPACE%BLOCK_SIZE(B)
               ZMINVAL(1) = MIN(ZMINVAL(1),MINVAL(FIELD_R3(:,:,VAR_ID,B)))
               ZMAX_VAL_ERR(1) = MAX(ZMAX_VAL_ERR(1),MAXVAL(FIELD_R3(:,:,VAR_ID,B)))
               DO JL=1, NLEV
-                DO JK=1, bsize
+                DO JK=1, BSIZE
                   ! Difference against reference result in one-norm sense
                   ZDIFF = ABS(FIELD_R3(JK,JL,VAR_ID,B) - REF_R3(JK,JL,B))
                   ZMAX_VAL_ERR(2) = MAX(ZMAX_VAL_ERR(2),ZDIFF)
