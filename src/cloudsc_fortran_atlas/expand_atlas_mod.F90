@@ -19,7 +19,7 @@ module expand_atlas_mod
   use file_io_mod, only: input_initialize, load_scalar, load_array
   use expand_mod, only: get_offsets, expand
 
-  use, intrinsic :: iso_c_binding, only : c_int, c_long, c_float, c_double, c_bool
+  use, intrinsic :: iso_c_binding, only : c_int, c_double
 
   implicit none
 
